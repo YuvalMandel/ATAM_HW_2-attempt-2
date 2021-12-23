@@ -20,16 +20,161 @@ sbox:	.byte	99,124,119,123,-14,107,111,-59,48,1,103,43,-2,-41,-85,118
 
 .section	.text
 keyMixing:
+
+        # actual calc. Key in rsi, Plain Text rdi
+        movq (%rsi), %r10 # r10 is the value of 8 bytes of key.
+        xorq  %r10, (%rdi)
+        
+        movq 8(%rsi), %r10 # r10 is the value of 8 bytes of key.
+        xorq  %r10, 8(%rdi)
+        
 	ret
 
 
 byteSubstitution:
+
+        movq $16, %rcx # TODO to use standard
+        xor %r8, %r8
+        xor %r10, %r10
+        xor %r11, %r11
+        lea sbox(%rip), %r9 # r9 will hold sbox effective address.       
+
+per_byte:
+          
+        movb (%r8, %rdi), %r10b # r10 is the value of the byte to swap.
+        movb (%r9, %r10), %r11b # r11 is the value we wanna change to.
+        movb %r11b, (%r8, %rdi)
+        
+        incq %r8
+        decq %rcx
+        cmpq $0, %rcx
+        jne per_byte
+
 	ret
 
 
 shiftRows:
+
+        rorl $8, 4(%rdi)
+        rorl $16, 8(%rdi)
+        rorl $24, 12(%rdi)
+        
 	ret
 
 
 cipher:
+
+        # push r12, 13, 14, 15
+        pushq %r12
+        pushq %r13
+        pushq %r14
+        pushq %r15
+
+        # rdx holds len
+        movq %rdx, %r15
+        
+        # rdi hold Pointer to all arrays, we keep it in r12
+        movq %rdi, %r12
+        
+        # r13 will hold block address
+        movq %r12, %r13
+        
+block:        
+
+        # Do an KM
+        # Params Input[4][4], Key[4][4]
+        movq %r13, %rdi
+        
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call keyMixing
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # We make r14 to be the round counter, init with 10
+        movq $9, %r14
+        
+middle_round:        
+        
+        # middle BS
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call byteSubstitution
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # middle SR
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call shiftRows
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # middle MC
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call mixColumns
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # middle KM
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call keyMixing
+        popq %rdx
+        popq %rsi
+        popq %rdi
+     
+        dec %r14
+        cmpq $0, %r14
+        jne middle_round
+        
+        # Last round
+        # Last BS
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call byteSubstitution
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # Last SR
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call shiftRows
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        # Last KM
+        pushq %rdi
+        pushq %rsi
+        pushq %rdx
+        call keyMixing
+        popq %rdx
+        popq %rsi
+        popq %rdi
+        
+        add $16, %r13
+        dec %r15
+        cmpq $0, %r15
+        jne block
+        
+        # pop r12, 13, 14, 15
+        popq %r15
+        popq %r14
+        popq %r13
+        popq %r12
+        
 	ret
