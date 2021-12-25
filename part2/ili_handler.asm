@@ -35,7 +35,7 @@ good_byte:
   pushq %r11
   pushq %rbx
   pushq %rbp
-  pushq %rsp
+  #pushq %rsp
   pushq %r12
   pushq %r13
   #pushq %r14
@@ -47,7 +47,7 @@ good_byte:
   #popq %r14
   popq %r13
   popq %r12
-  popq %rsp
+  # popq %rsp
   popq %rbp
   popq %rbx
   popq %r11
@@ -65,9 +65,10 @@ good_byte:
   je zero
 
   movq %r15, %rdi
+  inc %r14
+  movq %r14, 16(%rsp) # update OG rip to the next instruction
   popq %r15
   popq %r14
-  add $1, (%rsp) # update OG rip to the next instruction
   iretq
   
 zero:
