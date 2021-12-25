@@ -95,3 +95,26 @@ if [ -f "test_cipher.out" ]; then
 		echo -e "Passed "${idan}" out of "${mais}" tests!"
 	fi
 fi
+
+chmod +x function_changer_asm.py
+python function_changer_asm.py
+gcc test_cipher.c tests_idan/aux_tests.c tests_idan/aux_code.o tests_idan/tatakae_.o tests_idan/testing_.S -o test_conv.out
+if [ -f "test_conv.out" ]; then
+	declare -i idan2=0
+	timeout 20s ./test_conv.out < test_cipher_1 > cipher_out
+	if [ $? -eq 0 ]; then
+		diff cipher_out test_cipher_1_res
+		if [ $? -eq 0 ]; then
+			let idan2++
+		fi
+	fi
+	timeout 20s ./test_conv.out < test_cipher_2 > cipher_out
+	if [ $? -eq 0 ]; then
+		diff cipher_out test_cipher_2_res
+		if [ $? -eq 0 ]; then
+			let idan2++
+		fi
+	fi
+	echo -e "Passed "${idan2}" out of 2 additional tests!"
+fi
+
